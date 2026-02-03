@@ -70,6 +70,7 @@ void init_input() {
 }
 
 void find_freq(uint src) {
+    // ideal source is a rectangle wave
     fc_hw_t *fc = &clocks_hw -> fc0;
     
     // wait if fc is already running

@@ -7,8 +7,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-// USES AUDIO WAVE FROM SHRIYA AND MODULATES WAVE AMPLITUDE FOR VOLUME
-// OUTPUTS SOUND BY DRIVING PWM OUTPUT SIGNAL
+// GETS WAVEFORM TYPE AND AMPLITUDE FROM SHRIYA
 
 // Constants
 const int PWM_PIN = 37;
@@ -24,7 +23,7 @@ int rate = 20000;
 static int duty_cycle = 0;
 
 #define N 1000
-short int wavetable[N];
+extern int wavetable[N];
 
 void init_wavetable(void);
 void set_freq(int chan, float f);
@@ -34,6 +33,7 @@ void init_pwm_audio();
 //////////////////////////////////////////////////////////////////////////////
 
 void init_wavetable(void) {
+    // triangle square sine sawtooth
     for(int i=0; i < N; i++)
         wavetable[i] = (16383 * sin(2 * M_PI * i / N)) + 16384;
 }
