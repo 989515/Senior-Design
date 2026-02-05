@@ -14,7 +14,10 @@ const int PWM_PIN = 37;
 const int M_PI = 3.14159;
 
 const int VOL_PINS[4] = {28,29,30,31}; // B0..B3
+const int SOUND_PINS[4] = {15,16,17,18}; // PLACEHOLDER VALUES
+const int ON_PIN = 26; // PLACEHOLDER VALUE
 
+int profile = 0; // default uses sine wave
 int step0 = 0;
 int offset0 = 0;
 int step1 = 0;
@@ -27,14 +30,41 @@ static int duty_cycle = 0;
 #define N 1000
 extern int wavetable[N];
 
-void init_wavetable(void);
+void init_gpio();
+void updated_gpio_handler();
+void pwm_reset();
+void init_wavetable(int profile_num);
 void set_freq(int chan, float f);
 void pwm_audio_handler();
 void init_pwm_audio();
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_wavetable(void) {
+void init_gpio() {
+    for(int i = 0; i++; i < 4) {
+        gpio_init(SOUND_PINS[i]);
+    }
+    gpio_init(ON_PIN);
+}
+
+void pwm_reset() {
+    // handles pwm reset when sound profiles are chosen/switched
+}
+
+void updated_gpio_handler() {
+    // handles when ANY gpio sound pin updates (gpio_isr)
+    // updates profile variable here
+}
+
+void sleep_gpio_handler() {
+    // handles on/off button
+}
+
+void init_gpio_irq() {
+    // sets up sleep and update irqs
+}
+
+void init_wavetable(int profile_num) {
     // triangle square sine sawtooth
     for(int i=0; i < N; i++)
         wavetable[i] = (16383 * sin(2 * M_PI * i / N)) + 16384;
@@ -62,6 +92,7 @@ void pwm_audio_handler() {
     uint slice_num = pwm_gpio_to_slice_num(PWM_PIN);
     pwm_clear_irq(slice_num);
 
+    // works w/ sine wave (reference pwm lab)
     offset0 = offset0 + step0;
     offset1 = offset1 + step1;
     if (offset0 >= (N << 16)) offset0 = offset0 - (N << 16);
@@ -85,7 +116,7 @@ void init_pwm_audio() {
     // pwm_hw -> slice[slice_num].top = 1000000 / (rate - 1); // sets period of PWM signal to get PWM output freq (currently at 20 kHz)
     // pwm_set_wrap(slice_num, (pwm_hw -> slice[slice_num].top) - 1); // works with line above
     duty_cycle = 0; // initialize duty cycle
-    init_wavetable(); // sets up sine wave in memory
+    init_wavetable(profile); // sets up sine wave in memory
     irq_set_exclusive_handler(PWM_DEFAULT_IRQ_NUM(), pwm_audio_handler);
     irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);
     pwm_set_irq_enabled(slice_num, true);
