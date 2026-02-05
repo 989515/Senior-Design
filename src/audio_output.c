@@ -22,6 +22,7 @@ int volume = 2400;
 int rate = 20000;
 static int duty_cycle = 0;
 
+#define M_PI		3.14159265358979323846
 #define N 1000
 extern int wavetable[N];
 
