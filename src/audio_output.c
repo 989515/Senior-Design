@@ -12,6 +12,7 @@
 
 // Constants
 const int PWM_PIN = 37;
+const int M_PI = 3.14159;
 
 const int VOL_PINS[4] = {28,29,30,31}; // B0..B3
 
