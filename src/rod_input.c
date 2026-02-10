@@ -33,6 +33,9 @@ void get_vol();
 
 //////////////////////////////////////////////////////////////////////////////
 
+// TODO:
+// set up temp funciton to output internal delay 
+
 void init_adc() {
     adc_init();
     adc_gpio_init(ADC_PIN);
@@ -57,6 +60,8 @@ void init_dma() {
     temp |= (DREQ_ADC << DMA_CH0_CTRL_TRIG_TREQ_SEL_LSB);
     temp |= (1u << DMA_CH0_CTRL_TRIG_EN_LSB);
     dma_hw -> ch[0].ctrl_trig = temp;
+
+    // consider setting up dma 
 }
 
 void init_input() {
@@ -103,6 +108,6 @@ void get_vol() {
 void get_pitch() {
     // use schmitt trigger to fileer out noise 
     // gets freq. from pitch control using gpio pin
-    // returns 
+    // returns frequency in Hz
 }
 
