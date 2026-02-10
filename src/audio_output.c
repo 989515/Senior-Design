@@ -65,7 +65,7 @@ void init_gpio_irq() {
 }
 
 void init_wavetable(int profile_num) {
-    // triangle square sine sawtooth
+    // triangle square sine
     for(int i=0; i < N; i++)
         wavetable[i] = (16383 * sin(2 * M_PI * i / N)) + 16384;
 }
@@ -87,12 +87,7 @@ void set_freq(int chan, float f) {
     }
 }
 
-void pwm_audio_handler() {
-    // fill in
-    uint slice_num = pwm_gpio_to_slice_num(PWM_PIN);
-    pwm_clear_irq(slice_num);
-
-    // works w/ sine wave (reference pwm lab)
+int create_sine_samp(uint slice_num) {
     offset0 = offset0 + step0;
     offset1 = offset1 + step1;
     if (offset0 >= (N << 16)) offset0 = offset0 - (N << 16);
@@ -100,6 +95,23 @@ void pwm_audio_handler() {
     int samp = wavetable[offset0 >> 16] + wavetable[offset1 >> 16];
     samp = samp / 2;
     samp = samp * (pwm_hw -> slice[slice_num].top) / (1 << 16);
+
+    // if proofile = delay, delay()
+    // delayed_by_us();
+
+    return samp;
+}
+
+// create_clipped_samp() 
+
+// create_rect_samp() 
+
+void pwm_audio_handler() {
+    // fill in
+    uint slice_num = pwm_gpio_to_slice_num(PWM_PIN);
+    pwm_clear_irq(slice_num);
+
+    // LOGIC FOR CHOOSING WAVEFORM HERE
 
     pwm_set_chan_level(slice_num, pwm_gpio_to_channel(PWM_PIN), samp);
 }
