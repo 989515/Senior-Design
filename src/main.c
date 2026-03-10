@@ -12,22 +12,22 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_input();
-void init_gpio();
-void init_gpio_irq();
-float edge_timer_start();
-// void init_wavetable(void);
-// void set_freq(int chan, float f);
-// void init_pwm_audio();
+void init_conversions();
+float find_freq();
+void set_freq(int chan, float f);
+void set_vol(float volumePercent);
 
 // when testing inputs
 #define TEST
+
+// #define TEST_FREQ
 
 // when testing integration
 // #define RUN
 
 uint32_t adc_fifo_out = 0;
-float freq = 0;
+float freq = 440.0;
+float vol_percent = 0.5;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -37,31 +37,45 @@ int main() {
     stdio_init_all();
 
     // Initializing
-    init_input();
+    // init_pwm_audio();
 
-    init_gpio();
-    init_gpio_irq();
+    init_conversions();
 
-    // Setting the definitions
+    // Default setting
+    set_freq(0, freq);
+    set_vol(vol_percent);
 
 
     #ifdef TEST
     // char buffer[10];
     // printf("hellloooooo\n");
+    // init_counter_pwm();
+
     while (true) {
         // test adc input + dma
-        float f = (adc_fifo_out * 3.3) / 4095.0;
-        // snprintf(buffer, sizeof(buffer), "%1.7f", f);
-        // printf("ADC Result: %s     \r", buffer);
-        printf("ADC Result: %f     \t", f);
+        float freq_sum = 0;
+        float adc_sum = 0;
+        // float amp = (adc_fifo_out * 3.3) / 4095.0;
 
-        // test frequency counter
-        freq = edge_timer_start();
-        printf("Frequency: %8.6f   \n", freq);
+        for (int i = 0; i < 100; i++) {
+            adc_sum += (adc_fifo_out * 3.3) / 4095.0;
+            freq_sum += find_freq();
+            sleep_ms(2);
+        }
+
+        float amp = adc_sum / 100;
+        freq = freq_sum / 100;
+        vol_percent = amp / 3.3;
+        set_freq(0, freq);
+        set_vol(vol_percent);
+
+        printf("ADC Result: %1.4f    ", amp);
+        printf("Frequency: %8.3f    ", freq);
+        printf("Volume: %1.2f    \r", vol_percent);
+
 
         fflush(stdout);
-        sleep_ms(250);
-
+        sleep_ms(5);
     }
     #endif
 
