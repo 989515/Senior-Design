@@ -1,64 +1,91 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "pico.h"
 #include "pico/stdlib.h"
 #include "hardware/timer.h"
 #include "hardware/irq.h"
 #include "hardware/adc.h"
 #include "hardware/dma.h"
 #include "hardware/spi.h"
+#include "hardware/clocks.h"
 
 //////////////////////////////////////////////////////////////////////////////
 
-uint32_t adc_fifo_out = 0;
-void init_adc();
-void init_adc_freerun();
-void init_dma();
-void init_input();
-void find_freq();
-void get_pitch();
-void get_vol();
-void init_wavetable(void);
+void init_conversions();
+float find_freq();
 void set_freq(int chan, float f);
-void init_pwm_audio();
+void set_vol(float volumePercent);
 
 // when testing inputs
-// #define INPUT
+#define TEST
 
-// when testing audio
-// #define AUDIO
+// #define TEST_FREQ
 
 // when testing integration
-#define RUN
+// #define RUN
 
-// segment encoding for musical notes (A-G)
-extern const uint16_t msg[];
-extern const float natural_piano_freqs[];
-extern const uint8_t seg_note[];
-extern const char* natural_piano_keys[];
-
-// extern uint32_t adc_fifo_out;
-extern int SENSOR_GPIO;
-extern int ADC_CHAN;
+uint32_t adc_fifo_out = 0;
+float freq = 440.0;
+float vol_percent = 0.5;
 
 //////////////////////////////////////////////////////////////////////////////
 
-int main()
-{
+int main() {
     // Configures our microcontroller to 
     // communicate over UART through the TX/RX pins
     stdio_init_all();
 
-    // Setting the definitions
+    // Initializing
+    // init_pwm_audio();
 
-    
+    init_conversions();
+
+    // Default setting
+    set_freq(0, freq);
+    set_vol(vol_percent);
+
+
+    #ifdef TEST
+    // char buffer[10];
+    // printf("hellloooooo\n");
+    // init_counter_pwm();
+
+    while (true) {
+        // test adc input + dma
+        float freq_sum = 0;
+        float adc_sum = 0;
+        // float amp = (adc_fifo_out * 3.3) / 4095.0;
+
+        for (int i = 0; i < 100; i++) {
+            adc_sum += (adc_fifo_out * 3.3) / 4095.0;
+            freq_sum += find_freq();
+            sleep_ms(2);
+        }
+
+        float amp = adc_sum / 100;
+        freq = freq_sum / 100;
+        vol_percent = amp / 3.3;
+        set_freq(0, freq);
+        set_vol(vol_percent);
+
+        printf("ADC Result: %1.4f    ", amp);
+        printf("Frequency: %8.3f    ", freq);
+        printf("Volume: %1.2f    \r", vol_percent);
+
+
+        fflush(stdout);
+        sleep_ms(5);
+    }
+    #endif
+
+
+
     #ifdef RUN
     while (true) {
-
 
     }
     #endif
     
     return 0;
 }
-

@@ -14,6 +14,7 @@ float sine_table[WAVETABLE_SIZE];
 float square_table[WAVETABLE_SIZE];
 float sawtooth_table[WAVETABLE_SIZE];
 float triangle_table[WAVETABLE_SIZE];
+#define M_PI 3.14159265358979323846
 
 // ============================================================
 // INITIALIZATION
