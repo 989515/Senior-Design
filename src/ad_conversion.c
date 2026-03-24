@@ -51,14 +51,14 @@ extern float freq;
 
 int timer_dma_chan;
 uint counter_slice;
-extern absolute_time_t start_time;
+// extern absolute_time_t start_time;
 float frequency = 440.0;
 u_int32_t pulse_count;
 
-extern uint32_t wrap_count;
-extern uint16_t signal_count;
-extern int counter_flag;
-extern uint32_t prevTotal;
+// extern uint32_t wrap_count;
+// extern uint16_t signal_count;
+// extern int counter_flag;
+// extern uint32_t prevTotal;
 
 void init_gpio();
 // void pwm_reset();
@@ -75,7 +75,7 @@ void pwm_audio_handler();
 void init_pwm_audio();
 void init_conversions();
 
-float find_freq();
+float find_freq(float time_passed);
 void set_freq(int chan, float f);
 // void set_vol(float volumePercent);
 
@@ -124,7 +124,7 @@ void sleep_gpio_handler() { // not called in main
         gpio_acknowledge_irq(ON_PIN, GPIO_IRQ_EDGE_RISE);
         sio_hw -> gpio_set = (1ul << 25);
         pulse_count = 0;
-        start_time = get_absolute_time();
+        // start_time = get_absolute_time();
         // pwm_reset();
     }
 }
@@ -154,7 +154,7 @@ void init_gpio_irq() { // called in bit init
     irq_set_enabled(IO_IRQ_BANK0, true);
     gpio_set_dormant_irq_enabled(ON_PIN, GPIO_IRQ_EDGE_RISE, true);
     pulse_count = 0;
-    start_time = get_absolute_time();
+    // start_time = get_absolute_time();
 }
 
 void init_adc() { // called in init adc freerun
@@ -247,20 +247,20 @@ void init_conversions() { // put at beginning of main
     init_gpio_irq();
 
     // init input through adc 
-    init_pwm_audio();
+    // init_pwm_audio();
     init_dma();
     init_adc_freerun();
     adc_fifo_setup(true, true, 1, false, false);
 }
 
-float find_freq() { // called in main loop
+float find_freq(float time_passed) { // called in main loop
     // ideal source is a rectangle wave
     // NEEDS TO TAKE AVERAGE CUS OF NOISE
     // absolute_time_t delta = absolute_time_diff_us(start_time, get_absolute_time());
-    start_time = get_absolute_time();
+    // start_time = get_absolute_time();
     u_int32_t last_count = pulse_count;
     pulse_count = 0;
-    return (last_count / .250);
+    return (last_count / time_passed);
 }
 
 void set_freq(int chan, float f) { // called in main
