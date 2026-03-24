@@ -13,7 +13,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 void init_conversions();
-float find_freq();
+float find_freq(float time_passed);
 void set_freq(int chan, float f);
 void set_vol(float volumePercent);
 
@@ -28,6 +28,7 @@ void set_vol(float volumePercent);
 uint32_t adc_fifo_out = 0;
 float freq = 440.0;
 float vol_percent = 0.5;
+int duty_cycle = 50;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -44,7 +45,8 @@ int main() {
     // Default setting
     set_freq(0, freq);
     set_vol(vol_percent);
-
+    int samples = 200;
+    float time_passed = .002; // seconds
 
     #ifdef TEST
     // char buffer[10];
@@ -56,15 +58,16 @@ int main() {
         float freq_sum = 0;
         float adc_sum = 0;
         // float amp = (adc_fifo_out * 3.3) / 4095.0;
+        
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < samples; i++) {
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
-            freq_sum += find_freq();
-            sleep_ms(2);
+            freq_sum += find_freq(time_passed);
+            sleep_ms(time_passed * 100);
         }
 
-        float amp = adc_sum / 100;
-        freq = freq_sum / 100;
+        float amp = adc_sum / samples;
+        freq = freq_sum / samples; // USE THIS FREQUENCY
         vol_percent = amp / 3.3;
         set_freq(0, freq);
         set_vol(vol_percent);
