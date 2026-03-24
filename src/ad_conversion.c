@@ -41,7 +41,7 @@ int offset1 = 0;
 int volume = 2400;
 int rate = 20000; // max freq.
 // bool is_on = true;
-static int duty_cycle = 0; // CHANGE TO CHANGE VOLUME
+// static int duty_cycle = 0; // CHANGE TO CHANGE VOLUME
 // bool led_on = false;
 
 #define M_PI 3.14159265358979323846
@@ -141,12 +141,6 @@ void init_gpio_irq() { // called in bit init
     gpio_set_irq_enabled(OFF_PIN, GPIO_IRQ_EDGE_RISE, true);
     gpio_set_irq_enabled(ON_PIN, GPIO_IRQ_EDGE_RISE, true);
 
-    // sets up update irqs
-    // for (int i = 0; i < 4; i++) {
-    //     gpio_add_raw_irq_handler_masked(1u << PROFILE_PINS[i], updated_gpio_handler);
-    //     gpio_set_irq_enabled(PROFILE_PINS[i], GPIO_IRQ_EDGE_RISE, true);
-    // }
-
     // sets up frequency input irq
     gpio_add_raw_irq_handler(FREQ_PIN, count_pulse);
     gpio_set_irq_enabled(FREQ_PIN, GPIO_IRQ_EDGE_RISE, true);
@@ -200,54 +194,13 @@ int create_sine_samp(uint slice_num) { // called by handler
     return samp;
 }
 
-// void pwm_audio_handler() {
-//     // CHANGE PROFILE PIN ASSIGNMENT
-//     uint slice_num = pwm_gpio_to_slice_num(PWM_PIN);
-//     pwm_clear_irq(slice_num);
-
-//     // set_freq(1, freq); // 0 if only using one sine wave (no mixing)
-//     // add chanA and chanB variable if we mix
-
-//     int samp = create_sine_samp(slice_num);
-//     // int samp = -1;
-//     // int check_prof_pin = profile + PROFILE_PINS[0];
-//     // if (check_prof_pin == PROFILE_PINS[2]) samp = create_clipped_samp(slice_num);
-//     // else if (check_prof_pin == PROFILE_PINS[3]) samp = create_rect_samp(slice_num);
-//     // else samp = create_sine_samp(slice_num);
-//     // LOGIC FOR CHOOSING WAVEFORM HERE (arbitrary assignment of profiles to pins)
-
-//     pwm_set_chan_level(slice_num, pwm_gpio_to_channel(PWM_PIN), samp);
-// }
-
-// void init_pwm_audio() { // called at beginning of main
-//     pwm_config c = pwm_get_default_config();
-//     uint slice_num = pwm_gpio_to_slice_num(PWM_PIN);
-
-//     pwm_init(slice_num, &c, true);
-//     gpio_set_function(PWM_PIN, GPIO_FUNC_PWM);
-//     pwm_set_clkdiv_mode(slice_num, PWM_DIV_FREE_RUNNING); // PWM output
-
-//     // NEED TO SET UP FOR PWM - DOES IT NEED MORE FOR 2 CHANNELS?
-//     pwm_set_clkdiv(slice_num, 150); // changes pwm clock freq
-//     pwm_hw -> slice[slice_num].top = 1000000 / (rate - 1); // sets period of PWM signal to get PWM output freq (currently at 20 kHz)
-//     pwm_set_wrap(slice_num, (pwm_hw -> slice[slice_num].top) - 1); // works with line above
-//     duty_cycle = 0; // initialize duty cycle
-
-//     init_wavetable(); // sets up sine wave in memory
-//     assert(irq_has_handler(slice_num) == 0);
-//     pwm_clear_irq(slice_num);
-//     pwm_set_irq0_enabled(slice_num, true);
-//     irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_audio_handler);
-//     irq_set_enabled(PWM_IRQ_WRAP_0, true);
-// }
-
 void init_conversions() { // put at beginning of main
     // init for gpio pins and irqs
     init_gpio();
     init_gpio_irq();
 
     // init input through adc 
-    init_pwm_audio();
+    // init_pwm_audio();
     init_dma();
     init_adc_freerun();
     adc_fifo_setup(true, true, 1, false, false);
@@ -278,9 +231,4 @@ void set_freq(int chan, float f) { // called in main
         } else
             step1 = (f * N / rate) * (1<<16);
     }
-}
-
-void set_vol(float volumePercent) { // called in main
-    // needs to change the duty cycle
-    
 }
