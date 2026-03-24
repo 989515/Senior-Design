@@ -39,7 +39,7 @@ void set_profile(SoundProfile profile);
 
 uint32_t adc_fifo_out = 0;
 float freq = 440.0;
-float vol_percent = 0.5;
+float percent = 0.5;
 uint32_t wrap_count = 0;
 uint16_t signal_count = 0;
 int counter_flag = 0;
@@ -63,7 +63,7 @@ int main() {
 
     // Default setting
     set_freq(0, freq);
-    set_vol(vol_percent);
+    // set_vol(vol_percent);
 
     // intialize buttons
     setup_profile_buttons();
@@ -89,9 +89,9 @@ int main() {
 
         float amp = adc_sum / 100;
         freq = freq_sum / 100;
-        vol_percent = amp / 3.3;
+        percent = amp / 3.3;
         // set_freq(0, freq);
-        set_vol(vol_percent);
+        // set_vol(vol_percent);
 
         // printf("ADC Result: %1.4f    ", amp);
          printf("Frequency: %8.3f    ", freq);
@@ -118,7 +118,7 @@ int main() {
                     printf("  SYSTEM STATUS\n");
                     printf("========================================\n");
                     printf("Antenna frequency: %.2f Hz\n", freq);
-                    printf("Volume: %.1f%%\n", vol_percent * 100.0f);
+                    printf("Volume: %.1f%%\n", percent * 100.0f);
                     printf("Current profile: %d ", current_profile);
                     switch(current_profile) {
                         case PROFILE_AUTOTUNE: printf("(Auto-Tune)\n"); break;

@@ -117,6 +117,7 @@ WaveformType current_waveform = WAVEFORM_SINE;
 float current_freq = 440.0f;
 float target_freq = 440.0f;
 float last_input_freq = 440.0f;
+extern float percent;
 
 extern float find_freq(float time_passed);
 extern float freq;
@@ -421,9 +422,9 @@ void setup_pwm(void) {
     pwm_set_enabled(pwm_slice_num, true);
 }
 
-void output_sample_to_pwm(int16_t sample) {
+void output_sample_to_pwm(int16_t sample, float percent) {
     uint16_t duty_cycle = (uint16_t)(sample + 32768);
-    pwm_set_gpio_level(PWM_OUTPUT_PIN, duty_cycle);
+    pwm_set_gpio_level(PWM_OUTPUT_PIN, percent * duty_cycle);
 }
 
 
@@ -501,7 +502,7 @@ void process_one_audio_sample(void) {
     
     // Convert and output
     int16_t sample_int16 = (int16_t)(sample_float * 32767.0f);
-    output_sample_to_pwm(sample_int16);
+    output_sample_to_pwm(sample_int16, percent);
 
     // // TEST: Output constant value
     // int16_t sample_int16 = 16384;  // 50% of max (1.65V)
