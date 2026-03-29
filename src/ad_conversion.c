@@ -20,14 +20,14 @@
 
 // Constants
 // const int VOL_PIN = 37;
-const int PWM_PIN = 36;
+// const int PWM_PIN = 36;
 const int ADC_PIN = 41;
-const int FREQ_PIN = 13; // pwm b channel
+const int FREQ_PIN = 11; // pwm b channel
 const int ADC_CHAN = ADC_PIN - 40;
 // extern float MAX_VOL;
 // const float STANDARD_FREQUENCY = 4202.3869557909;
-const int VOL_PINS[4] = {22,23,24,25}; // B0..B3
-const int PROFILE_PINS[4] = {15,16,17,18}; // PLACEHOLDER VALUES
+// const int VOL_PINS[4] = {22,23,24,25}; // B0..B3
+// const int PROFILE_PINS[4] = {15,16,17,18}; // PLACEHOLDER VALUES
 const int ON_PIN = 26; // GP21
 const int OFF_PIN = 21;
 
@@ -69,24 +69,24 @@ void init_gpio_irq();
 void init_adc();
 void init_adc_freerun();
 void init_dma();
-void init_wavetable();
-int create_sine_samp(uint slice_num);
-void pwm_audio_handler();
-void init_pwm_audio();
+// void init_wavetable();
+// int create_sine_samp(uint slice_num);
+// void pwm_audio_handler();
+// void init_pwm_audio();
 void init_conversions();
 
 float find_freq(float time_passed);
-void set_freq(int chan, float f);
+// void set_freq(int chan, float f);
 // void set_vol(float volumePercent);
 
 //////////////////////////////////////////////////////////////////////////////
 
 void init_gpio() { // called in big init
-    for (int i = 0; i < 4; i++) {
-        // gpio_init(PROFILE_PINS[i]);
-        gpio_init(VOL_PINS[i]);
-        gpio_set_dir(VOL_PINS[i], GPIO_OUT);
-    }
+    // for (int i = 0; i < 4; i++) {
+    //     // gpio_init(PROFILE_PINS[i]);
+    //     gpio_init(VOL_PINS[i]);
+    //     gpio_set_dir(VOL_PINS[i], GPIO_OUT);
+    // }
     gpio_init(OFF_PIN);
     gpio_init(ON_PIN);
     gpio_init(FREQ_PIN);
@@ -99,17 +99,17 @@ void init_gpio() { // called in big init
 //     pwm_hw->slice[slice_num].cc = PWM_CH0_CC_RESET;
 // }
 
-void updated_gpio_handler() { // not called in main
-    // handles when ANY gpio sound pin updates (gpio_isr)
-    // updates profile variable here
-    for (int i = 0; i < 4; i++) {
-        if (gpio_get_irq_event_mask(i + PROFILE_PINS[0]) & GPIO_IRQ_EDGE_RISE) {
-            gpio_acknowledge_irq(i + PROFILE_PINS[0], GPIO_IRQ_EDGE_RISE);
-            profile = i;
-            // pwm_reset();
-        }
-    }
-}
+// void updated_gpio_handler() { // not called in main
+//     // handles when ANY gpio sound pin updates (gpio_isr)
+//     // updates profile variable here
+//     for (int i = 0; i < 4; i++) {
+//         if (gpio_get_irq_event_mask(i + PROFILE_PINS[0]) & GPIO_IRQ_EDGE_RISE) {
+//             gpio_acknowledge_irq(i + PROFILE_PINS[0], GPIO_IRQ_EDGE_RISE);
+//             profile = i;
+//             // pwm_reset();
+//         }
+//     }
+// }
 
 void sleep_gpio_handler() { // not called in main
     // handles on/off button
@@ -176,23 +176,23 @@ void init_dma() { // called in input
     dma_hw -> ch[0].ctrl_trig = temp0;
 }
 
-void init_wavetable() { // called in pwm init
-    // sine
-    for (int i=0; i < N; i++)
-        wavetable[i] = (16383 * sin(2 * 3.14159 * i / N)) + 16384; // shifted to be positive values
-}
+// void init_wavetable() { // called in pwm init
+//     // sine
+//     for (int i=0; i < N; i++)
+//         wavetable[i] = (16383 * sin(2 * 3.14159 * i / N)) + 16384; // shifted to be positive values
+// }
 
-int create_sine_samp(uint slice_num) { // called by handler
-    offset0 = offset0 + step0;
-    offset1 = offset1 + step1;
-    if (offset0 >= (N << 16)) offset0 = offset0 - (N << 16);
-    if (offset1 >= (N << 16)) offset1 = offset1 - (N << 16);
+// int create_sine_samp(uint slice_num) { // called by handler
+//     offset0 = offset0 + step0;
+//     offset1 = offset1 + step1;
+//     if (offset0 >= (N << 16)) offset0 = offset0 - (N << 16);
+//     if (offset1 >= (N << 16)) offset1 = offset1 - (N << 16);
 
-    int samp = wavetable[offset0 >> 16] + wavetable[offset1 >> 16];
-    samp = samp / 2;
-    samp = samp * (pwm_hw -> slice[slice_num].top) / (1 << 16);
-    return samp;
-}
+//     int samp = wavetable[offset0 >> 16] + wavetable[offset1 >> 16];
+//     samp = samp / 2;
+//     samp = samp * (pwm_hw -> slice[slice_num].top) / (1 << 16);
+//     return samp;
+// }
 
 void init_conversions() { // put at beginning of main
     // init for gpio pins and irqs
@@ -207,28 +207,24 @@ void init_conversions() { // put at beginning of main
 }
 
 float find_freq(float time_passed) { // called in main loop
-    // ideal source is a rectangle wave
-    // NEEDS TO TAKE AVERAGE CUS OF NOISE
-    // absolute_time_t delta = absolute_time_diff_us(start_time, get_absolute_time());
-    // start_time = get_absolute_time();
     u_int32_t last_count = pulse_count;
     pulse_count = 0;
-    return (last_count / time_passed);
+    return (last_count / time_passed); // counts per sec = Hz
 }
 
-void set_freq(int chan, float f) { // called in main
-    if (chan == 0) {
-        if (f == 0.0) {
-            step0 = 0;
-            offset0 = 0;
-        } else
-            step0 = (f * N / rate) * (1<<16);
-    }
-    if (chan == 1) { // this would let us mix two sine waves together (if we're using sine)
-        if (f == 0.0) {
-            step1 = 0;
-            offset1 = 0;
-        } else
-            step1 = (f * N / rate) * (1<<16);
-    }
-}
+// void set_freq(int chan, float f) { // called in main
+//     if (chan == 0) {
+//         if (f == 0.0) {
+//             step0 = 0;
+//             offset0 = 0;
+//         } else
+//             step0 = (f * N / rate) * (1<<16);
+//     }
+//     if (chan == 1) { // this would let us mix two sine waves together (if we're using sine)
+//         if (f == 0.0) {
+//             step1 = 0;
+//             offset1 = 0;
+//         } else
+//             step1 = (f * N / rate) * (1<<16);
+//     }
+// }

@@ -15,8 +15,8 @@
 
 void init_conversions();
 float find_freq(float time_passed);
-void set_freq(int chan, float f);
-void set_vol(float volumePercent);
+// void set_freq(int chan, float f);
+// void set_vol(float volumePercent);
 void setup_profile_buttons(void);
 void setup_audio_processing(void);
 void setup_audio_timer(void);
@@ -46,6 +46,7 @@ int counter_flag = 0;
 uint32_t prevTotal = 0;
 absolute_time_t start_time;
 extern float input_frequency;
+
 //////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -53,8 +54,6 @@ int main() {
     // communicate over UART through the TX/RX pins
     stdio_init_all();
     sleep_ms(2000);
-    // Initializing
-    // init_pwm_audio();
 
     init_conversions();
 
@@ -62,18 +61,14 @@ int main() {
     setup_audio_timer();
 
     // Default setting
-    set_freq(0, freq);
-    // set_vol(vol_percent);
-    int samples = 200;
+    // set_freq(0, freq);
+    int samples = 150;
     float time_passed = .002; // seconds
 
 
     // intialize buttons
     setup_profile_buttons();
     #ifdef TEST
-    // char buffer[10];
-    // printf("hellloooooo\n");
-    // init_counter_pwm();
 
     while (true) {
 
@@ -83,23 +78,32 @@ int main() {
         float freq_sum = 0;
         float adc_sum = 0;
         // float amp = (adc_fifo_out * 3.3) / 4095.0;
-        
-
+        float reset = find_freq(time_passed);
         for (int i = 0; i < samples; i++) {
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
-            freq_sum += find_freq(time_passed);
-            sleep_ms(time_passed * 100);
+            freq_sum += find_freq(time_passed); // Hz
+            sleep_ms(time_passed * 1000);
         }
 
-        float amp = adc_sum / 100;
-        freq = freq_sum / 100;
+        float amp = adc_sum / samples;
+        freq = freq_sum / samples;
+        // freq = freq - (((int)freq % 1000) * (1 / 8));
+
+        // for (int i = 0; i < samples; i++) {
+        //     adc_sum += (adc_fifo_out * 3.3) / 4095.0;
+        //     freq_sum += find_freq(time_passed);
+        //     sleep_ms(time_passed * 100);
+        // }
+
+        // float amp = adc_sum / samples;
+        // freq = freq_sum / samples;
         percent = amp / 3.3;
         // set_freq(0, freq);
-        // set_vol(vol_percent);
+        // set_vol(percent);
 
         // printf("ADC Result: %1.4f    ", amp);
-         printf("Frequency: %8.3f    ", freq);
-        // printf("Volume: %1.2f    \n", vol_percent);
+        printf("Freq.: %8.3f    ", freq);
+        // printf("Volume: %1.2f    \n", percent);
 
         int c = getchar_timeout_us(0);
         if (c != PICO_ERROR_TIMEOUT) {
@@ -138,7 +142,7 @@ int main() {
         
         printf("Frequency: %8.3f    \n", input_frequency);
         fflush(stdout);
-        sleep_ms(5);
+        sleep_ms(50);
     }
     #endif
 
