@@ -22,7 +22,7 @@
 // const int VOL_PIN = 37;
 // const int PWM_PIN = 36;
 const int ADC_PIN = 41;
-const int FREQ_PIN = 11; // pwm b channel
+const int FREQ_PIN = 13; // pwm b channel
 const int ADC_CHAN = ADC_PIN - 40;
 // extern float MAX_VOL;
 // const float STANDARD_FREQUENCY = 4202.3869557909;

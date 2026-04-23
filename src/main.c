@@ -78,7 +78,7 @@ int main() {
         float freq_sum = 0;
         float adc_sum = 0;
         // float amp = (adc_fifo_out * 3.3) / 4095.0;
-        float reset = find_freq(time_passed);
+        // float reset = find_freq(time_passed);
         for (int i = 0; i < samples; i++) {
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
             freq_sum += find_freq(time_passed); // Hz
@@ -103,7 +103,7 @@ int main() {
 
         // printf("ADC Result: %1.4f    ", amp);
         printf("Freq.: %8.3f    ", freq);
-        // printf("Volume: %1.2f    \n", percent);
+        printf("Volume: %1.2f   ", percent);
 
         int c = getchar_timeout_us(0);
         if (c != PICO_ERROR_TIMEOUT) {
