@@ -63,7 +63,7 @@ int main() {
     // Default setting
     // set_freq(0, freq);
     int samples = 150;
-    float time_passed = .002; // seconds
+    float time_passed = .0015; // seconds
 
 
     // intialize buttons
@@ -78,7 +78,8 @@ int main() {
         float freq_sum = 0;
         float adc_sum = 0;
         // float amp = (adc_fifo_out * 3.3) / 4095.0;
-        // float reset = find_freq(time_passed);
+        find_freq(time_passed);
+        sleep_ms(time_passed * 1000);
         for (int i = 0; i < samples; i++) {
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
             freq_sum += find_freq(time_passed); // Hz
@@ -103,7 +104,7 @@ int main() {
 
         // printf("ADC Result: %1.4f    ", amp);
         printf("Freq.: %8.3f    ", freq);
-        printf("Volume: %1.2f   ", percent);
+        printf("Volume: %2.2f%%   ", percent * 100);
 
         int c = getchar_timeout_us(0);
         if (c != PICO_ERROR_TIMEOUT) {
