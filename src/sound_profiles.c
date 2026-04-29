@@ -49,8 +49,8 @@
 // #define PWM_WRAP_VALUE     127   
 // #define WAVETABLE_SIZE     256
 // #define MAX_AUDIO_FREQ     4578.0f
-#define PWM_TOP         1700     // wrap value; carrier = 150MHz / 140 = 1.071 MHz
-#define PWM_AMPLITUDE   1701     // PWM_TOP + 1, used for duty cycle scaling
+#define PWM_TOP         3400     // wrap value; carrier = 150MHz / 140 = 1.071 MHz
+#define PWM_AMPLITUDE   3401     // PWM_TOP + 1, used for duty cycle scaling
 
 #define BUTTON_PROFILE_0  15  // Auto-Tune button
 #define BUTTON_PROFILE_1  16  // Distortion button
@@ -77,7 +77,7 @@ const float piano_keys_frequencies[38] = {
 #define NUM_PIANO_KEYS 38
 #define MIN_AUTOTUNE_FREQ 110.0f   // Lowest note
 #define MAX_AUTOTUNE_FREQ 4186.009f // Highest note
-
+static double cached_sample_rate = 0.0;
 typedef enum {
     WAVEFORM_SINE = 0,
     WAVEFORM_SQUARE = 1,
@@ -460,78 +460,153 @@ float get_frequency(void) {
 // ============================================================
 // AUDIO PROCESSING
 // ============================================================
-void process_one_audio_sample(void) {
-    printf("Processing audio sample\n");
+// void process_one_audio_sample(void) {
+//     // printf("Processing audio sample\n");
+//     input_frequency = get_frequency();
+//     float sample_float = 0.0f;
+    
+//     // PROFILE 0: AUTO-TUNE
+//     if (current_profile == PROFILE_AUTOTUNE) {
+//         float processed_freq = process_autotune(input_frequency);
+//         set_frequency(processed_freq);
+//         sample_float = generate_sample();
+//     }
+    
+//     // PROFILE 1: DISTORTION 
+//     else if (current_profile == PROFILE_DISTORTION) {
+//         set_frequency(input_frequency);
+//         current_waveform = WAVEFORM_SAWTOOTH;
+//         sample_float = generate_sample();
+        
+//         // Simple hard clipping instead of tanh
+//         if (sample_float > 0.3f) {
+//             sample_float = 0.3f + (sample_float - 0.3f) * 0.1f;
+//         }
+//         if (sample_float < -0.3f) {
+//             sample_float = -0.3f + (sample_float + 0.3f) * 0.1f;
+//         }
+//         sample_float *= 2.0f;
+//     }
+    
+//     // PROFILE 2: AMBIENT (Simplified - no vibrato, no filter)
+//     else {
+//         set_frequency_multi(input_frequency);
+        
+//         float sample_main = generate_sample_from_table(sine_table, 
+//                                                        &phase_main, 
+//                                                        phase_increment_main);
+//         float sample_detune1 = generate_sample_from_table(sine_table, 
+//                                                           &phase_detune1, 
+//                                                           phase_increment_detune1);
+//         float sample_detune2 = generate_sample_from_table(sine_table, 
+//                                                           &phase_detune2, 
+//                                                           phase_increment_detune2);
+        
+//         sample_float = (sample_main * 0.5f + 
+//                        sample_detune1 * 0.25f + 
+//                        sample_detune2 * 0.25f);
+//     }
+    
+//     // Clamp
+//     if (sample_float > 1.0f) sample_float = 1.0f;
+//     if (sample_float < -1.0f) sample_float = -1.0f;
+    
+//     // Convert and output
+//     sample_int16 = (int16_t)(sample_float * 32767.0f);
+    
+
+//     // // TEST: Output constant value
+//     // int16_t sample_int16 = 16384;  // 50% of max (1.65V)
+//     output_sample_to_pwm(sample_int16, percent);
+
+    
+//     last_sample_output = sample_int16;
+//     // Update counters
+//     total_samples_generated++;
+//     sample_counter++;
+    
+//     if (sample_counter >= 4410) {
+//         sample_counter = 0;
+//         debug_print_flag = true;
+//     }
+// }
+// Called ONCE when frequency changes, not every sample
+void update_frequency_from_input(void) {
     input_frequency = get_frequency();
-    float sample_float = 0.0f;
     
-    // PROFILE 0: AUTO-TUNE
-    if (current_profile == PROFILE_AUTOTUNE) {
-        float processed_freq = process_autotune(input_frequency);
-        set_frequency(processed_freq);
-        sample_float = generate_sample();
-    }
-    
-    // PROFILE 1: DISTORTION 
-    else if (current_profile == PROFILE_DISTORTION) {
-        set_frequency(input_frequency);
-        current_waveform = WAVEFORM_SAWTOOTH;
-        sample_float = generate_sample();
-        
-        // Simple hard clipping instead of tanh
-        if (sample_float > 0.3f) {
-            sample_float = 0.3f + (sample_float - 0.3f) * 0.1f;
+    switch (current_profile) {
+        case PROFILE_AUTOTUNE: {
+            float processed_freq = process_autotune(input_frequency);
+            set_frequency(processed_freq);
+            break;
         }
-        if (sample_float < -0.3f) {
-            sample_float = -0.3f + (sample_float + 0.3f) * 0.1f;
-        }
-        sample_float *= 2.0f;
-    }
-    
-    // PROFILE 2: AMBIENT (Simplified - no vibrato, no filter)
-    else {
-        set_frequency_multi(input_frequency);
-        
-        float sample_main = generate_sample_from_table(sine_table, 
-                                                       &phase_main, 
-                                                       phase_increment_main);
-        float sample_detune1 = generate_sample_from_table(sine_table, 
-                                                          &phase_detune1, 
-                                                          phase_increment_detune1);
-        float sample_detune2 = generate_sample_from_table(sine_table, 
-                                                          &phase_detune2, 
-                                                          phase_increment_detune2);
-        
-        sample_float = (sample_main * 0.5f + 
-                       sample_detune1 * 0.25f + 
-                       sample_detune2 * 0.25f);
-    }
-    
-    // Clamp
-    if (sample_float > 1.0f) sample_float = 1.0f;
-    if (sample_float < -1.0f) sample_float = -1.0f;
-    
-    // Convert and output
-    sample_int16 = (int16_t)(sample_float * 32767.0f);
-    
-
-    // // TEST: Output constant value
-    // int16_t sample_int16 = 16384;  // 50% of max (1.65V)
-    // output_sample_to_pwm(sample_int16);
-
-    
-    last_sample_output = sample_int16;
-    // Update counters
-    total_samples_generated++;
-    sample_counter++;
-    
-    if (sample_counter >= 4410) {
-        sample_counter = 0;
-        debug_print_flag = true;
+        case PROFILE_DISTORTION:
+            set_frequency(input_frequency);
+            break;
+        case PROFILE_AMBIENT:
+            set_frequency_multi(input_frequency);
+            break;
     }
 }
 
+// Called every sample from ISR — no branching on profile, no freq math
+// static inline void process_one_audio_sample(void) {
+//     float sample_float = 0.0f;
 
+//     switch (current_profile) {
+//         case PROFILE_AUTOTUNE:
+//             sample_float = generate_sample();
+//             break;
+
+//         case PROFILE_DISTORTION:
+//             sample_float = generate_sample();
+//             if (sample_float > 0.3f)       sample_float = 0.3f + (sample_float - 0.3f) * 0.1f;
+//             else if (sample_float < -0.3f) sample_float = -0.3f + (sample_float + 0.3f) * 0.1f;
+//             sample_float *= 2.0f;
+//             break;
+
+//         case PROFILE_AMBIENT:
+//             sample_float  = generate_sample_from_table(sine_table, &phase_main,    phase_increment_main)    * 0.5f;
+//             sample_float += generate_sample_from_table(sine_table, &phase_detune1, phase_increment_detune1) * 0.25f;
+//             sample_float += generate_sample_from_table(sine_table, &phase_detune2, phase_increment_detune2) * 0.25f;
+//             break;
+//     }
+
+//     // Clamp
+//     if (sample_float >  1.0f) sample_float =  1.0f;
+//     if (sample_float < -1.0f) sample_float = -1.0f;
+
+//     output_sample_to_pwm((int16_t)(sample_float * 32767.0f), percent);
+// }
+
+
+static inline void process_one_audio_sample(void) {
+    float sample_float = 0.0f;
+
+    switch (current_profile) {
+        case PROFILE_AUTOTUNE:
+            sample_float = generate_sample();
+            break;
+
+        case PROFILE_DISTORTION:
+            sample_float = generate_sample();
+            if (sample_float > 0.3f)       sample_float = 0.3f + (sample_float - 0.3f) * 0.1f;
+            else if (sample_float < -0.3f) sample_float = -0.3f + (sample_float + 0.3f) * 0.1f;
+            sample_float *= 2.0f;
+            break;
+
+        case PROFILE_AMBIENT:
+            sample_float  = generate_sample_from_table(sine_table, &phase_main,    phase_increment_main)    * 0.5f;
+            sample_float += generate_sample_from_table(sine_table, &phase_detune1, phase_increment_detune1) * 0.25f;
+            sample_float += generate_sample_from_table(sine_table, &phase_detune2, phase_increment_detune2) * 0.25f;
+            break;
+    }
+
+    if (sample_float >  1.0f) sample_float =  1.0f;
+    if (sample_float < -1.0f) sample_float = -1.0f;
+
+    output_sample_to_pwm((int16_t)(sample_float * 32767.0f), percent);
+}
 // ============================================================
 // TIMER CALLBACK
 // ============================================================
@@ -557,36 +632,72 @@ void __isr pwm_audio_irq_handler(void) {
     pwm_clear_irq(pwm_slice_num_local);
     process_one_audio_sample();    // your existing function, unchanged
 }
-
 void setup_pwm(void) {
-    // Verify clock (prints on startup so you can confirm 150 MHz)
-    uint32_t sys_clk = clock_get_hz(clk_sys);
-    // printf("sys_clk: %lu Hz | PWM top: %d | Sample rate: %lu Hz\n",
-    //        sys_clk, PWM_TOP, sys_clk / (PWM_TOP + 1));
+    cached_sample_rate = (double)clock_get_hz(clk_sys) / (double)(PWM_TOP + 1);
 
     gpio_set_function(PWM_OUTPUT_PIN, GPIO_FUNC_PWM);
-    printf("GPIO %d set to PWM function.\n", PWM_OUTPUT_PIN);
     pwm_slice_num_local = pwm_gpio_to_slice_num(PWM_OUTPUT_PIN);
-    printf("PWM slice number for GPIO %d: %d\n", PWM_OUTPUT_PIN, pwm_slice_num_local);
-    // Use raw hardware registers
+
     uint s = pwm_slice_num_local;
 
-    pwm_clear_irq(s);
-    pwm_set_irq0_enabled(s, true);    
-    irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_audio_irq_handler);
-    irq_set_enabled(PWM_IRQ_WRAP_0, true);
-    printf("PWM IRQ handler set for slice %d.\n", s);
     pwm_hw->slice[s].top = PWM_TOP;
-    pwm_hw->slice[s].cc  = 0; 
-    // pwm_hw->slice[s].div = 1 << 4;   // integer divisor = 1, fractional = 0
-    //                                   // no clock division — full 150 MHz
-    
-    printf("PWM initialized with top value %d.\n", PWM_TOP);
+    pwm_hw->slice[s].cc  = (PWM_AMPLITUDE / 2);
+    pwm_hw->slice[s].div = 1 << 4;
 
-    // Enable the slice last
-    pwm_hw->slice[s].csr = 1;         // bit 0 = EN
-    printf("PWM slice %d enabled.\n", s);
+    pwm_clear_irq(s);
+    irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_audio_irq_handler);
+    pwm_set_irq0_enabled(s, true);
+    irq_set_enabled(PWM_IRQ_WRAP_0, true);
+
+    pwm_hw->slice[s].csr = 1;
 }
+
+    // void setup_pwm(void) {
+    //     // Verify clock (prints on startup so you can confirm 150 MHz)
+    //     uint32_t sys_clk = clock_get_hz(clk_sys);
+    //     // printf("sys_clk: %lu Hz | PWM top: %d | Sample rate: %lu Hz\n",
+    //     //        sys_clk, PWM_TOP, sys_clk / (PWM_TOP + 1));
+
+    //     gpio_set_function(PWM_OUTPUT_PIN, GPIO_FUNC_PWM);
+    //     printf("GPIO %d set to PWM function.\n", PWM_OUTPUT_PIN);
+    //     pwm_slice_num_local = pwm_gpio_to_slice_num(PWM_OUTPUT_PIN);
+    //     printf("PWM slice number for GPIO %d: %d\n", PWM_OUTPUT_PIN, pwm_slice_num_local);
+    //     // Use raw hardware registers
+    //     uint s = pwm_slice_num_local;
+
+    //     // pwm_clear_irq(s);
+    //     // pwm_set_irq0_enabled(s, true);    
+    //     // irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_audio_irq_handler);
+    //     // irq_set_enabled(PWM_IRQ_WRAP_0, true);
+    //     // printf("PWM IRQ handler set for slice %d.\n", s);
+
+    //     pwm_hw->slice[s].top = PWM_TOP;
+    //     pwm_hw->slice[s].cc  = 0;
+
+    //     // Register handler
+    //     pwm_clear_irq(s);
+    //     irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_audio_irq_handler);
+
+    //     printf("PWM initialized with top value %d.\n", PWM_TOP);
+    //     printf("Hello\n");
+
+    //     // Start PWM and enable IRQ together, last
+    //     pwm_hw->slice[s].csr = 1;
+    //     pwm_set_irq0_enabled(s, true);
+    //     irq_set_enabled(PWM_IRQ_WRAP_0, true);
+    //     // pwm_hw->slice[s].top = PWM_TOP;
+    //     // pwm_hw->slice[s].cc  = 0; 
+    //     // integer divisor = 1, fractional = 0
+    //     // //                                   // no clock division — full 150 MHz
+        
+    //     // printf("PWM initialized with top value %d.\n", PWM_TOP);
+    //     // printf("Hello");
+
+    //     // // Enable the slice last
+    //     // pwm_hw->slice[s].csr = 1;         // bit 0 = EN
+    //     // printf("PWM slice %d enabled.\n", s);
+    //     printf("PWM setup complete.\n");
+    // }
 
 
 //setup 
@@ -595,6 +706,8 @@ void setup_audio_processing(void) {
     init_wavetables();
     printf("Wavetables initialized.\n");
     setup_pwm();
+    sleep_ms(100);  // let UART breathe
+
     printf("PWM initialized on GPIO %d.\n", PWM_OUTPUT_PIN);
     set_profile(PROFILE_AUTOTUNE);
     printf("Default profile set to Auto-Tune.\n");
@@ -638,33 +751,43 @@ void setup_audio_timer(void) {
 // }
 
 void output_sample_to_pwm(int16_t sample, float vol) {
-    /*
-     * Map int16 [-32768, 32767] → [0, PWM_AMPLITUDE-1]
-     * Then scale by volume [0.0, 1.0]
-     *
-     * Uses the same cc register shift pattern as doc 3:
-     *   pwm_hw->slice[s].cc = duty << 16  (channel B of the slice pair)
-     * GPIO 14 is on slice 7, channel A — shift by 0 instead of 16.
-     *
-     * GPIO 14 = slice 7, channel A → cc bits [15:0]
-     * GPIO 15 = slice 7, channel B → cc bits [31:16]
-     */
-    uint32_t unsigned_sample = (uint32_t)((int32_t)sample + 32768); // [0, 65535]
-    uint32_t duty = (unsigned_sample * PWM_AMPLITUDE) >> 16;         // [0, 139]
+    uint32_t unsigned_sample = (uint32_t)((int32_t)sample + 32768);
+    uint32_t duty = (unsigned_sample * PWM_AMPLITUDE) >> 16;
     duty = (uint32_t)(duty * vol);
     if (duty >= PWM_AMPLITUDE) duty = PWM_AMPLITUDE - 1;
 
     uint s = pwm_slice_num_local;
-    uint channel = pwm_gpio_to_channel(PWM_OUTPUT_PIN);
-
-    if (channel == PWM_CHAN_A) {
-        // Channel A occupies lower 16 bits of cc; preserve channel B
-        pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0xFFFF0000u) | duty;
-    } else {
-        // Channel B occupies upper 16 bits
-        pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0x0000FFFFu) | (duty << 16);
-    }
+    // GPIO 14 = slice 7, channel A → lower 16 bits of cc
+    pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0xFFFF0000u) | duty;
 }
+// void output_sample_to_pwm(int16_t sample, float vol) {
+//     /*
+//      * Map int16 [-32768, 32767] → [0, PWM_AMPLITUDE-1]
+//      * Then scale by volume [0.0, 1.0]
+//      *
+//      * Uses the same cc register shift pattern as doc 3:
+//      *   pwm_hw->slice[s].cc = duty << 16  (channel B of the slice pair)
+//      * GPIO 14 is on slice 7, channel A — shift by 0 instead of 16.
+//      *
+//      * GPIO 14 = slice 7, channel A → cc bits [15:0]
+//      * GPIO 15 = slice 7, channel B → cc bits [31:16]
+//      */
+//     uint32_t unsigned_sample = (uint32_t)((int32_t)sample + 32768); // [0, 65535]
+//     uint32_t duty = (unsigned_sample * PWM_AMPLITUDE) >> 16;         // [0, 139]
+//     duty = (uint32_t)(duty * vol);
+//     if (duty >= PWM_AMPLITUDE) duty = PWM_AMPLITUDE - 1;
+
+//     uint s = pwm_slice_num_local;
+//     uint channel = pwm_gpio_to_channel(PWM_OUTPUT_PIN);
+
+//     if (channel == PWM_CHAN_A) {
+//         // Channel A occupies lower 16 bits of cc; preserve channel B
+//         pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0xFFFF0000u) | duty;
+//     } else {
+//         // Channel B occupies upper 16 bits
+//         pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0x0000FFFFu) | (duty << 16);
+//     }
+// }
 
 
 // int main(void) {
