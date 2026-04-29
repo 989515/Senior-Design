@@ -68,7 +68,7 @@ int main() {
     // Default setting
     // set_freq(0, freq);
     int samples = 150;
-    float time_passed = .002; // seconds
+    float time_passed = .0015; // seconds
 
 
     // intialize buttons
@@ -82,7 +82,8 @@ int main() {
         float freq_sum = 0;
         float adc_sum = 0;
         // float amp = (adc_fifo_out * 3.3) / 4095.0;
-        // float reset = find_freq(time_passed);
+        find_freq(time_passed);
+        sleep_ms(time_passed * 1000);
         for (int i = 0; i < samples; i++) {
             sleep_ms(time_passed * 1000);
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
