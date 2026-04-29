@@ -46,7 +46,11 @@
 
 #define PWM_OUTPUT_PIN 14
 #define DEBUG_LED_PIN 25
-#define PWM_WRAP_VALUE 65535
+// #define PWM_WRAP_VALUE     127   
+// #define WAVETABLE_SIZE     256
+// #define MAX_AUDIO_FREQ     4578.0f
+#define PWM_TOP         1700     // wrap value; carrier = 150MHz / 140 = 1.071 MHz
+#define PWM_AMPLITUDE   1701     // PWM_TOP + 1, used for duty cycle scaling
 
 #define BUTTON_PROFILE_0  15  // Auto-Tune button
 #define BUTTON_PROFILE_1  16  // Distortion button
@@ -100,8 +104,9 @@ float square_table[WAVETABLE_SIZE];
 float sawtooth_table[WAVETABLE_SIZE];
 float triangle_table[WAVETABLE_SIZE];
 
+volatile int16_t sample_int16;
 static uint16_t pwm_wrap_value_stored = 0;
-
+static uint pwm_slice_num_local;
 // Oscillator state
 uint32_t phase_main = 0;
 uint32_t phase_detune1 = 0;
@@ -112,6 +117,7 @@ uint32_t phase_increment_detune1 = 0;
 uint32_t phase_increment_detune2 = 0;
 uint32_t phase_increment_octave = 0;
 WaveformType current_waveform = WAVEFORM_SINE;
+
 
 // Auto-tune state
 float current_freq = 440.0f;
@@ -241,6 +247,8 @@ void init_wavetables(void) {
             triangle_table[i] = 4.0f * phase_pos - 4.0f;
         }
     }
+
+
 }
 
 
@@ -293,30 +301,50 @@ void reset_autotune(void) {
 // ============================================================
 // WAVEFORM GENERATION
 // ============================================================
+static inline double get_sample_rate(void) {
+    return (double)clock_get_hz(clk_sys) / (double)(PWM_TOP + 1);
+}
 
 void set_frequency(float frequency) {
-    float cycles_per_sample = frequency / (float)SAMPLE_RATE;
-    phase_increment_main = (uint32_t)(cycles_per_sample * PHASE_MAX);
+    double cycles_per_sample = (double)frequency / get_sample_rate();
+    phase_increment_main = (uint32_t)(cycles_per_sample * 4294967296.0);
 }
 
 void set_frequency_multi(float frequency) {
-    float cycles_per_sample = frequency / (float)SAMPLE_RATE;
-    phase_increment_main = (uint32_t)(cycles_per_sample * PHASE_MAX);
-    
-    float cycles_detune1 = (frequency * 1.003f) / (float)SAMPLE_RATE;
-    phase_increment_detune1 = (uint32_t)(cycles_detune1 * PHASE_MAX);
-    
-    float cycles_detune2 = (frequency * 0.997f) / (float)SAMPLE_RATE;
-    phase_increment_detune2 = (uint32_t)(cycles_detune2 * PHASE_MAX);
+    double sr = get_sample_rate();
+    phase_increment_main    = (uint32_t)(((double)frequency          / sr) * 4294967296.0);
+    phase_increment_detune1 = (uint32_t)(((double)frequency * 1.003  / sr) * 4294967296.0);
+    phase_increment_detune2 = (uint32_t)(((double)frequency * 0.997  / sr) * 4294967296.0);
 }
 
 void set_frequency_octave(float frequency) {
-    float cycles_per_sample = frequency / (float)SAMPLE_RATE;
-    phase_increment_main = (uint32_t)(cycles_per_sample * PHASE_MAX);
-    
-    float cycles_octave = (frequency * 2.0f) / (float)SAMPLE_RATE;
-    phase_increment_octave = (uint32_t)(cycles_octave * PHASE_MAX);
+    double sr = get_sample_rate();
+    phase_increment_main   = (uint32_t)(((double)frequency       / sr) * 4294967296.0);
+    phase_increment_octave = (uint32_t)(((double)frequency * 2.0  / sr) * 4294967296.0);
 }
+// void set_frequency(float frequency) {
+//     float cycles_per_sample = frequency / (float)SAMPLE_RATE;
+//     phase_increment_main = (uint32_t)(cycles_per_sample * PHASE_MAX);
+// }
+
+// void set_frequency_multi(float frequency) {
+//     float cycles_per_sample = frequency / (float)SAMPLE_RATE;
+//     phase_increment_main = (uint32_t)(cycles_per_sample * PHASE_MAX);
+    
+//     float cycles_detune1 = (frequency * 1.003f) / (float)SAMPLE_RATE;
+//     phase_increment_detune1 = (uint32_t)(cycles_detune1 * PHASE_MAX);
+    
+//     float cycles_detune2 = (frequency * 0.997f) / (float)SAMPLE_RATE;
+//     phase_increment_detune2 = (uint32_t)(cycles_detune2 * PHASE_MAX);
+// }
+
+// void set_frequency_octave(float frequency) {
+//     float cycles_per_sample = frequency / (float)SAMPLE_RATE;
+//     phase_increment_main = (uint32_t)(cycles_per_sample * PHASE_MAX);
+    
+//     float cycles_octave = (frequency * 2.0f) / (float)SAMPLE_RATE;
+//     phase_increment_octave = (uint32_t)(cycles_octave * PHASE_MAX);
+// }
 
 float generate_sample_from_table(float* table, uint32_t* phase, uint32_t phase_inc) {
     *phase += phase_inc;
@@ -410,24 +438,6 @@ void set_profile(SoundProfile profile) {
     }
 }
 
-// ============================================================
-// PWM
-// ============================================================
-
-void setup_pwm(void) {
-    gpio_set_function(PWM_OUTPUT_PIN, GPIO_FUNC_PWM);
-    pwm_slice_num = pwm_gpio_to_slice_num(PWM_OUTPUT_PIN);
-    pwm_set_wrap(pwm_slice_num, PWM_WRAP_VALUE);
-    pwm_set_gpio_level(PWM_OUTPUT_PIN, PWM_WRAP_VALUE / 2);
-    pwm_set_enabled(pwm_slice_num, true);
-}
-
-void output_sample_to_pwm(int16_t sample, float percent) {
-    uint16_t duty_cycle = (uint16_t)(sample + 32768);
-    pwm_set_gpio_level(PWM_OUTPUT_PIN, percent * duty_cycle);
-}
-
-
 
 // ============================================================
 // FREQUENCY INPUT
@@ -451,6 +461,7 @@ float get_frequency(void) {
 // AUDIO PROCESSING
 // ============================================================
 void process_one_audio_sample(void) {
+    printf("Processing audio sample\n");
     input_frequency = get_frequency();
     float sample_float = 0.0f;
     
@@ -501,8 +512,8 @@ void process_one_audio_sample(void) {
     if (sample_float < -1.0f) sample_float = -1.0f;
     
     // Convert and output
-    int16_t sample_int16 = (int16_t)(sample_float * 32767.0f);
-    output_sample_to_pwm(sample_int16, percent);
+    sample_int16 = (int16_t)(sample_float * 32767.0f);
+    
 
     // // TEST: Output constant value
     // int16_t sample_int16 = 16384;  // 50% of max (1.65V)
@@ -536,11 +547,59 @@ bool audio_timer_callback(struct repeating_timer *t) {
 // SETUP
 // ============================================================
 
+
+
+
+// ============================================================
+// PWM
+// ============================================================
+void __isr pwm_audio_irq_handler(void) {
+    pwm_clear_irq(pwm_slice_num_local);
+    process_one_audio_sample();    // your existing function, unchanged
+}
+
+void setup_pwm(void) {
+    // Verify clock (prints on startup so you can confirm 150 MHz)
+    uint32_t sys_clk = clock_get_hz(clk_sys);
+    // printf("sys_clk: %lu Hz | PWM top: %d | Sample rate: %lu Hz\n",
+    //        sys_clk, PWM_TOP, sys_clk / (PWM_TOP + 1));
+
+    gpio_set_function(PWM_OUTPUT_PIN, GPIO_FUNC_PWM);
+    printf("GPIO %d set to PWM function.\n", PWM_OUTPUT_PIN);
+    pwm_slice_num_local = pwm_gpio_to_slice_num(PWM_OUTPUT_PIN);
+    printf("PWM slice number for GPIO %d: %d\n", PWM_OUTPUT_PIN, pwm_slice_num_local);
+    // Use raw hardware registers
+    uint s = pwm_slice_num_local;
+
+    pwm_clear_irq(s);
+    pwm_set_irq0_enabled(s, true);    
+    irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_audio_irq_handler);
+    irq_set_enabled(PWM_IRQ_WRAP_0, true);
+    printf("PWM IRQ handler set for slice %d.\n", s);
+    pwm_hw->slice[s].top = PWM_TOP;
+    pwm_hw->slice[s].cc  = 0; 
+    // pwm_hw->slice[s].div = 1 << 4;   // integer divisor = 1, fractional = 0
+    //                                   // no clock division — full 150 MHz
+    
+    printf("PWM initialized with top value %d.\n", PWM_TOP);
+
+    // Enable the slice last
+    pwm_hw->slice[s].csr = 1;         // bit 0 = EN
+    printf("PWM slice %d enabled.\n", s);
+}
+
+
+//setup 
+
 void setup_audio_processing(void) {
     init_wavetables();
+    printf("Wavetables initialized.\n");
     setup_pwm();
+    printf("PWM initialized on GPIO %d.\n", PWM_OUTPUT_PIN);
     set_profile(PROFILE_AUTOTUNE);
+    printf("Default profile set to Auto-Tune.\n");
     set_frequency(A4_FREQUENCY);
+    printf("Initial frequency set to %.2f Hz.\n", A4_FREQUENCY);
 }
 
 void setup_audio_timer(void) {
@@ -550,6 +609,60 @@ void setup_audio_timer(void) {
         printf("ERROR: Timer failed\n");
     } else {
         printf("Audio timer started: %d Hz\n", SAMPLE_RATE);
+    }
+}
+// void setup_pwm(void) {
+//     gpio_set_function(PWM_OUTPUT_PIN, GPIO_FUNC_PWM);
+//     pwm_slice_num = pwm_gpio_to_slice_num(PWM_OUTPUT_PIN);
+
+//     pwm_clear_irq(pwm_slice_num);
+//     pwm_set_irq_enabled(pwm_slice_num, true);
+//     irq_set_exclusive_handler(PWM_IRQ_WRAP_0, pwm_irq_handler);
+//     irq_set_enabled(PWM_IRQ_WRAP_0, true);
+
+//     pwm_set_wrap(pwm_slice_num, PWM_WRAP_VALUE);
+//     pwm_set_chan_level(pwm_slice_num, 
+//                       pwm_gpio_to_channel(PWM_OUTPUT_PIN), 
+//                       PWM_WRAP_VALUE / 2);
+//     pwm_set_enabled(pwm_slice_num, true);
+// }
+
+// void pwm_irq_handler(void) {
+//     pwm_clear_irq(pwm_slice_num);
+//     process_one_audio_sample();  // your existing function, unchanged
+// }
+
+// void output_sample_to_pwm(int16_t sample, float percent) {
+//     uint16_t duty_cycle = (uint16_t)(sample + 32768);
+//     pwm_set_gpio_level(PWM_OUTPUT_PIN, percent * duty_cycle);
+// }
+
+void output_sample_to_pwm(int16_t sample, float vol) {
+    /*
+     * Map int16 [-32768, 32767] → [0, PWM_AMPLITUDE-1]
+     * Then scale by volume [0.0, 1.0]
+     *
+     * Uses the same cc register shift pattern as doc 3:
+     *   pwm_hw->slice[s].cc = duty << 16  (channel B of the slice pair)
+     * GPIO 14 is on slice 7, channel A — shift by 0 instead of 16.
+     *
+     * GPIO 14 = slice 7, channel A → cc bits [15:0]
+     * GPIO 15 = slice 7, channel B → cc bits [31:16]
+     */
+    uint32_t unsigned_sample = (uint32_t)((int32_t)sample + 32768); // [0, 65535]
+    uint32_t duty = (unsigned_sample * PWM_AMPLITUDE) >> 16;         // [0, 139]
+    duty = (uint32_t)(duty * vol);
+    if (duty >= PWM_AMPLITUDE) duty = PWM_AMPLITUDE - 1;
+
+    uint s = pwm_slice_num_local;
+    uint channel = pwm_gpio_to_channel(PWM_OUTPUT_PIN);
+
+    if (channel == PWM_CHAN_A) {
+        // Channel A occupies lower 16 bits of cc; preserve channel B
+        pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0xFFFF0000u) | duty;
+    } else {
+        // Channel B occupies upper 16 bits
+        pwm_hw->slice[s].cc = (pwm_hw->slice[s].cc & 0x0000FFFFu) | (duty << 16);
     }
 }
 

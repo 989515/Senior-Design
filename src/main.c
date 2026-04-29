@@ -1,3 +1,4 @@
+//main.c
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -11,8 +12,7 @@
 #include "hardware/clocks.h"
 #include "hardware/pwm.h"
 
-//////////////////////////////////////////////////////////////////////////////
-
+/////////////////////////////////////////////////////////////////////////////
 void init_conversions();
 float find_freq(float time_passed);
 // void set_freq(int chan, float f);
@@ -38,28 +38,33 @@ void set_profile(SoundProfile profile);
 // #define RUN
 
 uint32_t adc_fifo_out = 0;
-float freq = 440.0;
-float percent = 0.5;
+volatile float freq = 440.0;
+volatile float percent = 0.5;
 uint32_t wrap_count = 0;
 uint16_t signal_count = 0;
 int counter_flag = 0;
 uint32_t prevTotal = 0;
 absolute_time_t start_time;
 extern float input_frequency;
+extern int16_t sample_int16;
+extern void output_sample_to_pwm(int16_t sample, float volume);
 
 //////////////////////////////////////////////////////////////////////////////
 
 int main() {
+    
     // Configures our microcontroller to 
     // communicate over UART through the TX/RX pins
     stdio_init_all();
     sleep_ms(2000);
-
     init_conversions();
 
+    set_profile(PROFILE_AUTOTUNE);
+    printf("hello world\n");
     setup_audio_processing();   
-    setup_audio_timer();
-
+    printf("Audio processing setup complete.\n");
+    // setup_audio_timer();
+    printf("Audio processing active!\n");
     // Default setting
     // set_freq(0, freq);
     int samples = 150;
@@ -71,7 +76,6 @@ int main() {
     #ifdef TEST
 
     while (true) {
-
         //keyboard comands for key switch (testing)
        
         // test adc input + dma
@@ -81,8 +85,10 @@ int main() {
         find_freq(time_passed);
         for (int i = 0; i < samples; i++) {
             sleep_ms(time_passed * 1000);
+            sleep_ms(time_passed * 1000);
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
             freq_sum += find_freq(time_passed); // Hz
+            sleep_ms(time_passed * 1000);
         }
 
         float amp = adc_sum / samples;
@@ -101,10 +107,10 @@ int main() {
         // set_freq(0, freq);
         // set_vol(percent);
 
-        printf("ADC Result: %1.4f    ", amp);
-        // printf("Freq.: %8.3f    ", 010freq);
-        printf("Volume: %2.2f%%   ", percent * 100);
-
+         printf("ADC Result: %1.4f    ", amp);
+        //printf("Freq.: %8.3f    ", freq);
+        printf("Volume: %1.2f   ", percent);
+        output_sample_to_pwm(sample_int16, percent);
         int c = getchar_timeout_us(0);
         if (c != PICO_ERROR_TIMEOUT) {
             switch (c) {
