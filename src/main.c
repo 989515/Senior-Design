@@ -48,7 +48,7 @@ absolute_time_t start_time;
 extern float input_frequency;
 extern int16_t sample_int16;
 extern void output_sample_to_pwm(int16_t sample, float volume);
-
+extern void update_frequency_from_input(void);
 //////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -104,13 +104,17 @@ int main() {
         // float amp = adc_sum / samples;
         // freq = freq_sum / samples;
         percent = amp / 3.3;
+        percent = .5;
         // set_freq(0, freq);
         // set_vol(percent);
-
-         printf("ADC Result: %1.4f    ", amp);
-        //printf("Freq.: %8.3f    ", freq);
+        //freq = 440.0f; // for testing
+        freq = amp * 5000.0f; // map 0-3.3V to 0-5000Hz
+        printf("ADC Result: %1.4f    ", amp);
+        printf("Freq.: %8.3f    ", freq);
         printf("Volume: %1.2f   ", percent);
-        output_sample_to_pwm(sample_int16, percent);
+        update_frequency_from_input();
+        sleep_ms(10);
+        // output_sample_to_pwm(sample_int16, percent);
         int c = getchar_timeout_us(0);
         if (c != PICO_ERROR_TIMEOUT) {
             switch (c) {
