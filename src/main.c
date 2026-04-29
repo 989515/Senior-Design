@@ -79,15 +79,14 @@ int main() {
         float adc_sum = 0;
         // float amp = (adc_fifo_out * 3.3) / 4095.0;
         find_freq(time_passed);
-        sleep_ms(time_passed * 1000);
         for (int i = 0; i < samples; i++) {
+            sleep_ms(time_passed * 1000);
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
             freq_sum += find_freq(time_passed); // Hz
-            sleep_ms(time_passed * 1000);
         }
 
         float amp = adc_sum / samples;
-        freq = freq_sum / samples;
+        freq = (freq_sum / samples);
         // freq = freq - (((int)freq % 1000) * (1 / 8));
 
         // for (int i = 0; i < samples; i++) {
@@ -98,12 +97,12 @@ int main() {
 
         // float amp = adc_sum / samples;
         // freq = freq_sum / samples;
-        percent = amp / 3.3;
+        percent = amp / 3.0;
         // set_freq(0, freq);
         // set_vol(percent);
 
-        // printf("ADC Result: %1.4f    ", amp);
-        printf("Freq.: %8.3f    ", freq);
+        printf("ADC Result: %1.4f    ", amp);
+        // printf("Freq.: %8.3f    ", 010freq);
         printf("Volume: %2.2f%%   ", percent * 100);
 
         int c = getchar_timeout_us(0);
