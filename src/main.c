@@ -49,6 +49,8 @@ extern float input_frequency;
 extern int16_t sample_int16;
 extern void output_sample_to_pwm(int16_t sample, float volume);
 extern void update_frequency_from_input(void);
+float cal_freq = 3000;
+
 //////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -67,8 +69,8 @@ int main() {
     printf("Audio processing active!\n");
     // Default setting
     // set_freq(0, freq);
-    int samples = 150;
-    float time_passed = .0015; // seconds
+    int samples = 100;
+    float time_passed = .002; // seconds
 
 
     // intialize buttons
@@ -85,14 +87,14 @@ int main() {
         find_freq(time_passed);
         for (int i = 0; i < samples; i++) {
             sleep_ms(time_passed * 1000);
-            sleep_ms(time_passed * 1000);
             adc_sum += (adc_fifo_out * 3.3) / 4095.0;
             freq_sum += find_freq(time_passed); // Hz
-            sleep_ms(time_passed * 1000);
         }
 
         float amp = adc_sum / samples;
-        freq = (freq_sum / samples) / 2;
+        float og_freq = (freq_sum / samples);
+        freq = (og_freq - cal_freq);
+        if (freq < 0) freq = 0;
         // freq = freq - (((int)freq % 1000) * (1 / 8));
 
         // for (int i = 0; i < samples; i++) {
@@ -109,9 +111,11 @@ int main() {
         // set_vol(percent);
         //freq = 440.0f; // for testing
         // freq = amp * 5000.0f; // map 0-3.3V to 0-5000Hz
-        printf("ADC Result: %1.4f    ", amp);
-        // printf("Freq.: %8.3f    ", freq);
-        printf("Volume: %2.1f   ", percent * 100);
+        printf("ADC Result: %1.4f V \t", amp);
+        printf("Og. Freq.: %8.3f     ", og_freq);
+        printf("Cal. Factor: %5.f     ", cal_freq);
+        printf("Freq.: %8.3f     ", freq);
+        printf("Volume: %2.1f %% \n", percent * 100);
         update_frequency_from_input();
         sleep_ms(10);
         // output_sample_to_pwm(sample_int16, percent);
@@ -146,11 +150,17 @@ int main() {
                     printf("ADC value: %lu\n", adc_fifo_out);
                     printf("========================================\n\n");
                     break;
+                case '.':
+                    cal_freq += 100;
+                    break;
+                case ',':
+                    cal_freq -= 100;
+                    break;                    
             }
         }
 
         
-        printf("Frequency: %8.3f    \n", input_frequency);
+        // printf("Frequency: %8.3f    \n", input_frequency);
         fflush(stdout);
         sleep_ms(50);
     }
