@@ -49,7 +49,7 @@ extern float input_frequency;
 extern int16_t sample_int16;
 extern void output_sample_to_pwm(int16_t sample, float volume);
 extern void update_frequency_from_input(void);
-float cal_freq = 3000;
+float cal_freq = 2000;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -155,7 +155,19 @@ int main() {
                     break;
                 case ',':
                     cal_freq -= 100;
-                    break;                    
+                    break;   
+                case '/': // calibrate from zero
+                    cal_freq = 0;
+                    break;
+                case 'b': 
+                    cal_freq = 1000;
+                    break;
+                case 'n': // when someone's playing at the instrument
+                    cal_freq = 2000;
+                    break;
+                case 'm': // when resting on keyboard
+                    cal_freq = 3000;
+                    break;                 
             }
         }
 
