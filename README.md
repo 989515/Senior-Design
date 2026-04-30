@@ -1,0 +1,11 @@
+if      (vol >= 3.3f) return percent = 1.00f;
+        else if (vol >= 2.97f) return percent = 0.90f;
+        else if (vol >= 2.64f) return percent = 0.80f;
+        else if (vol >= 2.31f) return percent = 0.70f;
+        else if (vol >= 1.98f) return percent = 0.60f;
+        else if (vol >= 1.65f) return percent = 0.50f;
+        else if (vol >= 1.32f) return percent = 0.40f;
+        else if (vol >= 0.99f) return percent = 0.30f;
+        else if (vol >= 0.66f) return percent = 0.20f;
+        else if (vol >= 0.33f) return percent = 0.10f;
+        else                       return percent = 0.00f;
