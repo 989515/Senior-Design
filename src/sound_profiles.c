@@ -123,7 +123,7 @@ WaveformType current_waveform = WAVEFORM_SINE;
 float current_freq = 440.0f;
 float target_freq = 440.0f;
 float last_input_freq = 440.0f;
-extern float percent;
+extern volatile percent;
 
 extern float find_freq(float time_passed);
 extern float freq;
@@ -713,6 +713,7 @@ void setup_audio_processing(void) {
     printf("Default profile set to Auto-Tune.\n");
     set_frequency(A4_FREQUENCY);
     printf("Initial frequency set to %.2f Hz.\n", A4_FREQUENCY);
+    
 }
 
 void setup_audio_timer(void) {

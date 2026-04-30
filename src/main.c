@@ -40,6 +40,7 @@ void set_profile(SoundProfile profile);
 uint32_t adc_fifo_out = 0;
 volatile float freq = 440.0;
 volatile float percent = 0.5;
+volatile float vol = .5;
 uint32_t wrap_count = 0;
 uint16_t signal_count = 0;
 int counter_flag = 0;
@@ -105,14 +106,39 @@ int main() {
 
         // float amp = adc_sum / samples;
         // freq = freq_sum / samples;
-        percent = amp / 3.3;
+        vol = amp / 3.3;
+        percent = vol;
+
+        // if (vol <= 2.0 & vol >= 1.0) percent = .5;
+        // else if (vol > 2.0) percent += .1;
+        // else if (vol < 1.0) percent -= .1;
+
+        // if (vol < .1) percent = 0.0;
+        // else if (vol > 3.0) percent = 1.0;
+        // else if (vol >= 0.1 && vol <= )
+        // if (percent > 1.0) percent = 1.0;
+        // if (percent < 0.0) percent = 0.0;
+        // float clamp = fmaxf(0.0, fminf(3.3f,vol));
+        // percent = clamp/3.3;
+        float max_amp = 2.0;
+        if (amp >= 1.0 * max_amp)  percent = 1.00f; 
+        else if (amp >= .9 * max_amp)  percent = 0.90f; 
+        else if (amp >= .8 * max_amp)  percent = 0.80f; 
+        else if (amp >= .7 * max_amp)  percent = 0.70f; 
+        else if (amp >= .6 * max_amp)  percent = 0.60f; 
+        else if (amp >= .5 * max_amp)  percent = 0.50f; 
+        else if (amp >= .4 * max_amp)  percent = 0.40f; 
+        else if (amp >= .3 * max_amp)  percent = 0.30f; 
+        else if (amp >= .2 * max_amp)  percent = 0.20f; 
+        else if (amp >= .1 * max_amp)  percent = 0.10f; 
+        else percent = 0.00f;
         // percent = .5;
         // set_freq(0, freq);
         // set_vol(percent);
         //freq = 440.0f; // for testing
         // freq = amp * 5000.0f; // map 0-3.3V to 0-5000Hz
         printf("ADC Result: %1.4f V \t", amp);
-        printf("Og. Freq.: %8.3f     ", og_freq);
+        printf("OG Freq.: %8.3f     ", og_freq);
         printf("Cal. Factor: %5.f     ", cal_freq);
         printf("Freq.: %8.3f     ", freq);
         printf("Volume: %2.1f %% \n", percent * 100);
