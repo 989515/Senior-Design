@@ -120,7 +120,7 @@ int main() {
         // if (percent < 0.0) percent = 0.0;
         // float clamp = fmaxf(0.0, fminf(3.3f,vol));
         // percent = clamp/3.3;
-        float max_amp = 2.0;
+        float max_amp = 3.0;
         if (amp >= 1.0 * max_amp)  percent = 1.00f; 
         else if (amp >= .9 * max_amp)  percent = 0.90f; 
         else if (amp >= .8 * max_amp)  percent = 0.80f; 
